@@ -10,31 +10,104 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "libft.h"
+#include "get_next_line.h"
 
-int	get_next_line(int fd, char **line)
+int					len(t_gnl all)
 {
-	static char		*mem;
-	char			buff[BUFF_SIZE + 1];
-	int				ret;
+	unsigned int	ret;
 
-	ret = 1;
-	if (BUFF_SIZE <= 0 || !line)
-		return (-1);
-	if (!mem)
-		mem = ft_strnew(0);
-	while (!(ft_strchr(mem, '\n')) && (ret = read(fd, buff, BUFF_SIZE)))
+	ret = 0;
+	while (*(all.pos) != '\n')
 	{
-		if (ret == -1)
-			return (-1);
-		buff[ret] = 0;
-		mem = ft_strjoin(mem, buff);
+		ret++;
+		all.pos++;
+		if ((unsigned int)((void*)all.pos - all.lst->content)
+			== all.lst->content_size)
+		{
+			all.lst = all.lst->next;
+			if (!all.lst)
+				break ;
+			all.pos = (char *)(all.lst->content);
+		}
 	}
-	if (ft_strchr(mem, '\n') || ((*line = ft_strdup(mem)) && 0))
-		*line = ft_strsub(mem, 0, ft_strchr(mem, '\n') - mem + 1);
-	if (ret)
-		line[0][ft_strlen(*line) - 1] = 0;
-	mem = ft_strsub(mem, ft_strchr(mem, '\n') - mem + 1, \
-			ft_strlen(ft_strchr(mem, '\n')));
-	return (ret == 0 ? 0 : 1);
+	return (ret);
+}
+
+void				del(void *ptr, size_t size)
+{
+	(void)size;
+	free(ptr);
+}
+
+void				last(t_gnl *all)
+{
+	t_list		*tmp;
+
+	if ((unsigned int)((void*)all->pos - all->lst->content)
+		== all->lst->content_size)
+	{
+		if (all->lst)
+		{
+			tmp = all->lst;
+			all->lst = all->lst->next;
+			ft_lstdelone(&tmp, del);
+			if (all->lst)
+				all->pos = all->lst->content;
+		}
+	}
+}
+
+int					readline(t_gnl *all, char *str)
+{
+	t_list		*tmp;
+
+	while (*all->pos != '\n')
+	{
+		*str++ = *all->pos++;
+		if ((unsigned int)((void*)all->pos - all->lst->content)
+				== all->lst->content_size)
+		{
+			tmp = all->lst;
+			all->lst = all->lst->next;
+			all->pos = (char *)(all->lst->content);
+			ft_lstdelone(&tmp, del);
+			if ((*all->pos != '\n' && !all->lst))
+				return (0);
+			if (!all->lst)
+				return (1);
+			all->pos = (char *)all->lst->content;
+		}
+	}
+	*str = 0;
+	all->pos++;
+	last(all);
+	return (1);
+}
+
+int					get_next_line(const int fd, char **line)
+{
+	static t_gnl	all = {NULL, NULL};
+	int				ret;
+	char			buff[BUFF_SIZE + 1];
+
+	if (!all.lst)
+	{
+		while ((ret = read(fd, buff, BUFF_SIZE)))
+		{
+			if (ret == -1)
+				return (-1);
+			ft_lstsmartpushback(&(all.lst), ft_lstnew((void *)buff, ret));
+			buff[ret] = 0;
+			if (ft_strchr(buff, '\n'))
+				break ;
+		}
+		if (all.lst)
+			all.pos = all.lst->content;
+	}
+	if (all.lst)
+	{
+		*line = (char *)malloc(sizeof(char) * (len(all) + 1));
+		return (readline(&all, *line));
+	}
+	return (0);
 }

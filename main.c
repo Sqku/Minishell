@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "head.h"
+#include <signal.h>
 
 char	*good_path_2(char *name, char *path)
 {
@@ -34,6 +35,7 @@ int		exec(char **argv, t_list *env)
 			waitpid(father, 0, 0);
 		else if (father == 0)
 		{
+			signal(SIGINT, SIG_DFL);
 			if (execve(gp, argv, env_to_str(env)) < 0)
 			{
 				ft_putstr("exec format error: ");
@@ -54,11 +56,16 @@ int		main(int ac, char **av, char **envp)
 
 	(void)ac;
 	(void)av;
+	signal(SIGINT, SIG_IGN);
 	env = get_env(envp);
 	while (42)
 	{
 		ft_putstr("ft_minishell1_$> ");
-		get_next_line(0, &line);
+		if (!get_next_line(0, &line))
+		{
+			ft_putstr("exit\n");
+			return (0);
+		}
 		argv = ft_strsplit(ft_strtrim(line), ' ');
 		if (!ft_command(argv, &env))
 			exec(argv, env);
