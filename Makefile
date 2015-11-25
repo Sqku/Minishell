@@ -1,4 +1,4 @@
-NAME	= ft_minishell1
+NAME	= minishell
 SRC		= main.c \
 		  ft_command.c \
 		  ft_cd.c \
